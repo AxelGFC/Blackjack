@@ -11,7 +11,6 @@ import os
 datos_sesion=["",""]
 nombre_introducido=False
 
-
 def dividir_cifras(numero):#le agrega comas al numero
     texto = "{:,}"
     texto = texto.format(numero)
@@ -43,7 +42,7 @@ def convertir_carta(carta): #Si es necesario, a partir de el numero de la carta 
         return "A"
     
     else:
-        return carta
+        return str(carta)
 
 def actualizar_record():#Actualiza el scoreboard con el nuevo record:   
     archivo_records = open("carpeta_datos/records.txt","r")
@@ -93,8 +92,10 @@ class Aplicacion:
         fuente=tkFont.Font(family="Lucida Grande",size=18)
         fuente_2=tkFont.Font(family="Lucida Grande",size=20)
         fuente_3=tkFont.Font(family="Impact",size=12)
+        global fuente_4
         fuente_4=tkFont.Font(family="Segoe Script",size=16)
         self.fuente_fea=tkFont.Font(family="fixedsys",size=12)
+        self.fuente_fea_mediana=tkFont.Font(family="fixedsys",size=17)
         self.fuente_fea_grande=tkFont.Font(family="fixedsys",size=40)
         
         #========================
@@ -133,23 +134,27 @@ class Aplicacion:
 
         #========================
         for i in range (5):
-            self.label_carta=tk.Label(self.ventana1,text="  ", background="brown",foreground="white",font=fuente_2,width=2,height=2)
-            self.label_carta.grid(column=i+1, row=0)
+            self.frame_carta=tk.LabelFrame(self.ventana1,bd=2,padx=1,pady=1,background="orange",relief="flat")
+            self.frame_carta.grid(column=i+1, row=0)
+            self.label_carta=tk.Label(self.frame_carta,text="", background="brown",foreground="black",font=fuente_2,width=2,height=2)
+            self.label_carta.grid(column=0,row=0)
             self.lista_labels_skynet.insert(i,self.label_carta)
 
-            self.label_carta_jugador=tk.Label(self.ventana1,text="  ", background="brown",foreground="white",font=fuente_2,width=2,height=2)
-            self.label_carta_jugador.grid(column=i+1, row=5)
+            self.frame_carta=tk.LabelFrame(self.ventana1,bd=2,padx=1,pady=1,background="orange",relief="flat")
+            self.frame_carta.grid(column=i+1, row=5)
+            self.label_carta_jugador=tk.Label(self.frame_carta,text="", background="brown",foreground="black",font=fuente_2,width=2,height=2)
+            self.label_carta_jugador.grid(column=0, row=0)
             self.lista_labels_jugador.insert(i,self.label_carta_jugador)
 
         #========================
-        self.suma_total_skynet_label=tk.Label(self.ventana1,font=fuente)
-        self.suma_total_skynet_label.grid(column=6, row=0)
+        self.suma_total_skynet_label=tk.Label(self.ventana1,font=self.fuente_fea_grande)
+        self.suma_total_skynet_label.grid(column=6, row=0,columnspan=2)
 
         self.suma_total_jugador_label=tk.Label(self.ventana1,text="",font=self.fuente_fea_grande)
-        self.suma_total_jugador_label.grid(column=0, row=10)
+        self.suma_total_jugador_label.grid(column=0, row=10,columnspan=2)
 
-        self.resultado_label=tk.Label(self.ventana1,text=" \n ",font=fuente_3)
-        self.resultado_label.grid(column=6, row=1,rowspan=2)
+        self.resultado_label=tk.Label(self.ventana1,text="",font=fuente_3)
+        self.resultado_label.grid(column=2, row=10,columnspan=3)
 
         self.label_fichas_jugador=tk.Label(self.ventana1,text="fichas: "+str(self.fichas_jugador),font=fuente_4)
         self.label_fichas_jugador.grid(column=2, row=8,columnspan=3)
@@ -158,78 +163,88 @@ class Aplicacion:
         self.label_fichas_sumadas_jugador.grid(column=3, row=6,rowspan=2,pady=20)
 
         self.label_record=tk.Label(self.ventana1,text="Record actual: "+self.record.get(),font=self.fuente_fea)
-        self.label_record.grid(column=6,row=9)
+        self.label_record.grid(column=5,row=9,columnspan=2)
 
-        self.label1=tk.Label(self.ventana1,text="Blackjack!",font=fuente_4)
-        self.label1.grid(column=1, row=2,columnspan=5,padx=100,pady=80)
+        self.label1=tk.Label(self.ventana1,text="Blackjack!")
+        self.label1.grid(column=2, row=2,columnspan=3,padx=100,pady=80)
         
         #============
-        self.botonPedir=tk.Button(self.ventana1,width=20,  text="Pedir", command=self.pedir,font=fuente_4,bd=6,relief="sunken")
+        self.botonPedir=tk.Button(self.ventana1,width=20,  text="Pedir", command=self.pedir,bd=6)
         self.botonPedir.grid(column=0, row=7,columnspan=2)
 
-        self.botonQuedarse=tk.Button(self.ventana1,width=20, text="Quedarse", command=self.quedarse,font=fuente_4,state=tk.DISABLED,bd=6,relief="sunken")
+        self.botonQuedarse=tk.Button(self.ventana1,width=20, text="Quedarse", command=self.quedarse,state=tk.DISABLED,bd=6)
         self.botonQuedarse.grid(column=5, row=7,columnspan=2)
         
         self.botonCambiar=tk.Button(self.ventana1,width=20,  text="", command=self.cambiar,font=fuente,bd=0,relief="sunken",state=tk.DISABLED)
         self.botonCambiar.grid(column=0, row=8,columnspan=2,rowspan=2)
 
         self.botonRecords=tk.Button(self.ventana1,text="Scoreboard",font=("Segoe Script", 14), command=self.record_boton)
-        self.botonRecords.grid(column=6, row=10)
+        self.botonRecords.grid(column=5, row=10,columnspan=2)
         
-        self.entrada_apuesta=tk.Entry(self.ventana1, width=10,font=fuente_4, textvariable=self.apuesta,background="purple",foreground="white",insertbackground="white",borderwidth=5,justify=tk.CENTER)
+        self.entrada_apuesta=tk.Entry(self.ventana1, width=15,font=fuente_4, textvariable=self.apuesta,background="purple",foreground="white",insertbackground="white",borderwidth=5,justify=tk.CENTER)
         self.entrada_apuesta.grid(column=3, row=9)
 
         self.boton_configuracion=tk.Button(self.ventana1,width=15,  text="Configuración",font=self.fuente_fea, command=self.configuracion)
-        self.boton_configuracion.grid(column=6, row=11)
+        self.boton_configuracion.grid(column=5, row=11,columnspan=2)
+        self.fondo=""
+        self.letra=""
 
         global cambiar_tema
         def cambiar_tema(tema):
             if tema=="oscuro":
-                self.botonPedir.configure(background="black",foreground="magenta",activebackground="grey20",activeforeground="white")
-                self.botonQuedarse.configure(background="black",foreground="magenta",activebackground="grey20",activeforeground="white")
+                self.fondo="black"
+                self.letra="white"
+                self.botonPedir.configure(background="purple4",foreground="white",activebackground="grey20",activeforeground="white",font=fuente_4,relief="sunken")
+                self.botonQuedarse.configure(background="purple4",foreground="white",activebackground="grey20",activeforeground="white",font=fuente_4,relief="sunken")
                 self.botonRecords.configure(background="black",foreground="gold2")
                 self.boton_configuracion.configure(background="black",foreground="purple")
-                self.resultado_label.configure(background="black",foreground="white")
-                self.suma_total_skynet_label.configure(foreground="red", background="black")
-                self.botonCambiar.configure(background="black")
-                self.suma_total_jugador_label.configure(foreground="white", background="black")
-                self.label1.configure(foreground="white",background="black")
-                self.label_record.configure(background="black",foreground="white")
-                self.label_fichas_sumadas_jugador.configure(background="black",foreground="white")
-                self.label_fichas_jugador.configure(background="black",foreground="white")
-                self.ventana1.configure(background="black")
+                self.label1.configure(font=fuente_4)
+                self.label_fichas_jugador.configure(font=fuente_4)
+                self.entrada_apuesta.configure(background="purple",font=fuente_4)
 
             elif tema=="claro":
-                self.botonPedir.configure(background="white",foreground="magenta",activebackground="grey20",activeforeground="black")
-                self.botonQuedarse.configure(background="white",foreground="magenta",activebackground="grey20",activeforeground="black")
+                self.fondo="mistyrose2"
+                self.letra="black"
+                self.botonPedir.configure(background="maroon",foreground="white",activebackground="grey20",activeforeground="black",font=fuente_4,relief="sunken")
+                self.botonQuedarse.configure(background="maroon",foreground="white",activebackground="grey20",activeforeground="black",font=fuente_4,relief="sunken")
                 self.botonRecords.configure(background="dark slate gray",foreground="gold2")
                 self.boton_configuracion.configure(background="white",foreground="black")
-                self.resultado_label.configure(background="light gray",foreground="black")
-                self.suma_total_skynet_label.configure(foreground="red", background="light gray")
-                self.botonCambiar.configure(background="light gray")
-                self.suma_total_jugador_label.configure(foreground="black", background="light gray")
-                self.label1.configure(foreground="black",background="light gray")
-                self.label_record.configure(background="light gray",foreground="black")
-                self.label_fichas_sumadas_jugador.configure(background="light gray",foreground="black")
-                self.label_fichas_jugador.configure(background="light gray",foreground="black")
-                self.ventana1.configure(background="light gray")
+                self.label1.configure(font=fuente_4)
+                self.label_fichas_jugador.configure(font=fuente_4)
+                self.entrada_apuesta.configure(background="purple",font=fuente_4)
             
             elif tema=="clasico":
-                self.botonPedir.configure(background="white",foreground="black",activebackground="gray",activeforeground="white")
-                self.botonQuedarse.configure(background="white",foreground="black",activebackground="gray",activeforeground="white")
+                self.fondo="dark slate gray"
+                self.letra="white"
+                self.botonPedir.configure(background="maroon",foreground="white",activebackground="gray",activeforeground="white",font=fuente_4,relief="sunken")
+                self.botonQuedarse.configure(background="maroon",foreground="white",activebackground="gray",activeforeground="white",font=fuente_4,relief="sunken")
                 self.botonRecords.configure(background="brown",foreground="gold2")
                 self.boton_configuracion.configure(background="white",foreground="purple")
-                self.resultado_label.configure(background="dark slate gray",foreground="white")
-                self.suma_total_skynet_label.configure(foreground="red", background="dark slate gray")
-                self.botonCambiar.configure(background="dark slate gray")
-                self.suma_total_jugador_label.configure(foreground="white", background="dark slate gray")
-                self.label1.configure(foreground="white",background="dark slate gray")
-                self.label_record.configure(background="dark slate gray",foreground="white")
-                self.label_fichas_sumadas_jugador.configure(background="dark slate gray",foreground="white")
-                self.label_fichas_jugador.configure(background="dark slate gray",foreground="white")
-                self.ventana1.configure(background="dark slate gray")
+                self.label1.configure(font=fuente_4)
+                self.label_fichas_jugador.configure(font=fuente_4)
+                self.entrada_apuesta.configure(background="purple",font=fuente_4)
+
+            elif tema=="pastel":
+                self.fondo="plum2"
+                self.letra="orchid4"
+                self.botonPedir.configure(background="khaki",foreground="hotpink1",activebackground="dark khaki",activeforeground="white",font=self.fuente_fea_mediana,relief="ridge")
+                self.botonQuedarse.configure(background="khaki",foreground="hotpink1",activebackground="dark khaki",activeforeground="white",font=self.fuente_fea_mediana,relief="ridge")
+                self.botonRecords.configure(background="hotpink",foreground="white",activebackground="deeppink4",activeforeground="white")
+                self.boton_configuracion.configure(background="mediumpurple1",foreground="white",activebackground="mediumpurple4",activeforeground="white")
+                self.label1.configure(font=self.fuente_fea_mediana)
+                self.label_fichas_jugador.configure(font=self.fuente_fea_mediana)
+                self.entrada_apuesta.configure(background="mediumpurple1",font=self.fuente_fea_mediana)
 
 
+            self.resultado_label.configure(background=self.fondo,foreground=self.letra)
+            self.suma_total_skynet_label.configure(background=self.fondo,foreground="red",)
+            self.botonCambiar.configure(background=self.fondo)
+            self.suma_total_jugador_label.configure(background=self.fondo,foreground=self.letra)
+            self.label1.configure(background=self.fondo,foreground=self.letra)
+            self.label_record.configure(background=self.fondo,foreground=self.letra)
+            self.label_fichas_sumadas_jugador.configure(background=self.fondo,foreground=self.letra)
+            self.label_fichas_jugador.configure(background=self.fondo,foreground=self.letra)
+            self.ventana1.configure(background=self.fondo)
         cambiar_tema(self.tema.get())
 
         global escribir
@@ -239,8 +254,8 @@ class Aplicacion:
                 tiempo=700//len(palabra_a_escribir)
                 for letra in palabra_a_escribir:
                     palabra_final+=letra
-                    label.config(text=palabra_final)
-                    ventana.after(tiempo,ventana.update())
+                    ventana.after(tiempo,label.config(text=palabra_final))
+                    ventana.update()
             else:
                 palabra_final=inicio+palabra_a_escribir
                 label.config(text=palabra_final)
@@ -265,12 +280,13 @@ class Aplicacion:
         tk.Radiobutton(cuadro2, text="Habilitar", variable=self.radio_animaciones_variable, value=1,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=1)
         tk.Radiobutton(cuadro2, text="Desabilitar", variable=self.radio_animaciones_variable, value=2,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=2)
 
-        cuadro3=tk.LabelFrame(ventana_configuracion,text="Tema",bd=5,padx=30,pady=15,background="black",font=self.fuente_fea,foreground="white")
+        cuadro3=tk.LabelFrame(ventana_configuracion,text="Tema",bd=5,padx=30,pady=20,background="black",font=self.fuente_fea,foreground="white")
         cuadro3.grid(column=0,row=2)
         
         tk.Radiobutton(cuadro3, text="Clásico", variable=self.radio_tema_variable, value=0,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=1)
         tk.Radiobutton(cuadro3, text="Claro", variable=self.radio_tema_variable, value=1,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=2)
         tk.Radiobutton(cuadro3, text="Oscuro", variable=self.radio_tema_variable, value=2,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=3)
+        tk.Radiobutton(cuadro3, text="pastel", variable=self.radio_tema_variable, value=3,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=4)
 
         def aplicar():
             if self.radio_video_variable.get()==1:
@@ -289,8 +305,11 @@ class Aplicacion:
                 self.tema.set("clasico")
             elif self.radio_tema_variable.get()==1:
                 self.tema.set("claro")
-            else:
+            elif self.radio_tema_variable.get()==2:
                 self.tema.set("oscuro")
+            elif self.radio_tema_variable.get()==3:
+                self.tema.set("pastel")
+
             cambiar_tema(self.tema.get())
             ventana_configuracion.after(300,ventana_configuracion.destroy)
 
@@ -307,11 +326,13 @@ class Aplicacion:
     def pedir(self):#Boton pedir otra carta
         #Habilitar boton quedarse:
         self.botonQuedarse.configure(state=tk.NORMAL)
+        self.label_fichas_sumadas_jugador.configure(text="\n\n\n\n")
 
         if self.se_ha_apostado.get()==False:#Si se aposto:
             if int(self.apuesta.get()) > 0 and int(self.apuesta.get()) <= self.fichas_jugador and self.fichas_jugador>0:
                 self.fichas_jugador-=int(self.apuesta.get())#se resta lo apostado a la cantidad total de fichas:
                 self.label_fichas_jugador.configure(text="fichas: "+dividir_cifras(self.fichas_jugador))
+                self.label_fichas_sumadas_jugador.configure(foreground="red",text="\n\n\n\n-"+(self.apuesta.get())) 
 
                 self.se_ha_apostado.set(True)
                 self.entrada_apuesta.configure(state=tk.DISABLED)#se desactiva la entrada de la apuesta:
@@ -319,7 +340,7 @@ class Aplicacion:
         #=================
         if self.contador==0:#Cuando empiece el juego te da otra mas, asi son dos (reglas)
             self.lista_cartas_jugador.insert(self.contador,carta_aleatoria())
-            self.lista_labels_jugador[self.contador].config(text=convertir_carta(self.lista_cartas_jugador[self.contador]),background="white",foreground="black")
+            self.lista_labels_jugador[self.contador].config(text=convertir_carta(self.lista_cartas_jugador[self.contador]),background="white")
             
             if self.lista_cartas_jugador[self.contador] ==1:
                 self.ases_totales += 1
@@ -328,7 +349,7 @@ class Aplicacion:
         
         if self.contador<5:
             self.lista_cartas_jugador.insert(self.contador,carta_aleatoria())
-            self.lista_labels_jugador[self.contador].config(text=convertir_carta(self.lista_cartas_jugador[self.contador]),background="white",foreground="black")
+            self.lista_labels_jugador[self.contador].config(text=convertir_carta(self.lista_cartas_jugador[self.contador]),background="white")
             if self.lista_cartas_jugador[self.contador] ==1:
                 self.ases_totales += 1
                 self.lista_labels_jugador[self.contador].config(background="yellow")
@@ -342,10 +363,16 @@ class Aplicacion:
                 self.botonCambiar.configure(background="yellow",foreground="black")
 
         #Se actualiza el total de las cartas del jugador:
-        self.suma_total_jugador_label.configure(text=str(self.total_cartas_jugador))
+        self.suma_total_jugador_label.configure(text=str(self.total_cartas_jugador),foreground="white")
+        if self.tema=="clasico" or self.tema=="claro":
+            self.botonQuedarse.configure(background="brown")
+        elif self.tema=="oscuro":
+            self.botonQuedarse.configure(background="black")
+        elif self.tema=="pastel":
+            self.botonQuedarse.configure(background="khaki")
 
         if self.total_cartas_jugador ==21:#Si llega justo a 21:
-            self.suma_total_jugador_label.configure(foreground="purple")
+            self.suma_total_jugador_label.configure(foreground="magenta")
             self.botonQuedarse.configure(background="purple",foreground="white")
 
         
@@ -365,28 +392,25 @@ class Aplicacion:
         self.suma_total_jugador_label.configure(text=str(self.total_cartas_jugador))
 
         if self.total_cartas_jugador ==21:#Si con el cambio llega justo a 21:
-            self.suma_total_jugador_label.configure(foreground="lightgreen")
+            self.suma_total_jugador_label.configure(foreground="magenta")
             self.botonQuedarse.configure(background="purple",foreground="white")
 
         if self.ases_totales < 1:#Si no hay mas ases se desactiva el boton:
             self.botonCambiar.configure(state=tk.DISABLED,text="",bd=0)
             if self.tema.get()=="oscuro":
-                self.botonCambiar.configure(background="black")
+                self.botonCambiar.configure(background=self.fondo)
             elif self.tema.get()=="claro":
-                self.botonCambiar.configure(background="light gray")
+                self.botonCambiar.configure(background=self.fondo)
             elif self.tema.get()=="clasico":
-                self.botonCambiar.configure(background="dark slate gray")
+                self.botonCambiar.configure(background=self.fondo)
+            elif self.tema.get()=="pastel":
+                self.botonCambiar.configure(background=self.fondo)
+            self.botonCambiar.configure(state=tk.DISABLED,text="",bd=0)
          
     def quedarse(self):#Boton Quedarse
         record_mejorado=False
         self.botonPedir.configure(state=tk.DISABLED,background="grey")
-        self.botonCambiar.configure(state=tk.DISABLED,background="black",text="",bd=0)
-        if self.tema.get()=="oscuro":
-            self.botonCambiar.configure(background="black")
-        elif self.tema.get()=="claro":
-            self.botonCambiar.configure(background="light gray")
-        elif self.tema.get()=="clasico":
-            self.botonCambiar.configure(background="dark slate gray")
+        self.botonCambiar.configure(state=tk.DISABLED,background=self.fondo,text="",bd=0)
 
         if self.continuar.get()==False:
             self.botonQuedarse.configure(state=tk.DISABLED)#desactiva el boton quedarse
@@ -396,7 +420,7 @@ class Aplicacion:
                     self.lista_labels_skynet[i].config(text=convertir_carta(self.lista_cartas_skynet[i]),background="white",foreground="black")           
 
                     self.total_cartas_skynet=sum(self.lista_cartas_skynet)
-                    self.suma_total_skynet_label.configure(text="Skynet: "+ str(self.total_cartas_skynet))
+                    self.suma_total_skynet_label.configure(text=self.total_cartas_skynet)
 
                     self.ventana1.update()
                     self.ventana1.after(350)
@@ -407,31 +431,31 @@ class Aplicacion:
             mensaje=""
             #Si los dos se pasan de 21 (empatan):
             if self.total_cartas_jugador > 21 and self.total_cartas_skynet > 21:
-                mensaje="VOS Y SKYNET SE PASAN  DE 21,\n EMPATE"
+                mensaje="VOS Y SKYNET SE PASAN  DE 21, EMPATE"
                 self.jugador_empato.set(True)
             
             #Si suman la misma cantidad de cartas (empatan):    
             elif self.total_cartas_jugador == self.total_cartas_skynet:
-                mensaje="HUBO UN EMPATE\n"
+                mensaje="HUBO UN EMPATE"
                 self.jugador_empato.set(True)
                 
             #Si el jugador se pasa de 21 pero Skynet no (Skynet gana):            
             elif self.total_cartas_jugador > 21 and self.total_cartas_skynet <= 21:
-                mensaje="TE PASASTE DE 21,\n SKYNET GANA"
+                mensaje="TE PASASTE DE 21, SKYNET GANA"
 
             #Si Skynet se pasa de 21 pero el jugador no (jugador gana):    
             elif self.total_cartas_jugador <= 21 and self.total_cartas_skynet > 21:
-                mensaje="SKYNET SE PASA DE 21,\n LO HAS DERROTADO"
+                mensaje="SKYNET SE PASA DE 21, LO HAS DERROTADO"
                 self.jugador_gano.set(True)
 
             #Si el jugador esta mas cerca de 21 (jugador gana):    
             elif self.total_cartas_jugador > self.total_cartas_skynet:
-                mensaje="HAS DERROTADO A SKYNET\n"
+                mensaje="HAS DERROTADO A SKYNET"
                 self.jugador_gano.set(True)
 
             #Si Skynet esta mas cerca de 21 (Skynet gana):    
             elif self.total_cartas_jugador < self.total_cartas_skynet:
-                mensaje="HA SIDO DERROTADO\n POR SKYNET"
+                mensaje="HA SIDO DERROTADO POR SKYNET"
 
         #============
             #Si hubo un empate:
@@ -463,10 +487,12 @@ class Aplicacion:
             else:#Si el jugador pierde
                 self.resultado_label.configure(foreground="red")
                 self.suma_total_skynet_label.configure(foreground="red") 
-                self.label_fichas_sumadas_jugador.configure(foreground="red",text="\n\n\n\n-"+(self.apuesta.get())) 
 
+            if self.jugador_gano.get()==True or self.jugador_empato.get()==True:
+                escribir("fichas: ",dividir_cifras(self.fichas_jugador),self.label_fichas_jugador,self.ventana1)
+                
             escribir("",mensaje,self.resultado_label,self.ventana1)
-            escribir("fichas: ",dividir_cifras(self.fichas_jugador),self.label_fichas_jugador,self.ventana1)
+
             if record_mejorado:
                 escribir("Record actual: ",dividir_cifras(int(self.record.get())),self.label_record,self.ventana1)
 
@@ -479,16 +505,7 @@ class Aplicacion:
                 self.botonQuedarse.configure(background="lightgreen",foreground="black")
 
             elif self.jugador_gano.get()==True: 
-                if self.tema.get()=="oscuro":
-                    self.botonQuedarse.configure(background="black",foreground="green")
-                else:
-                    self.botonQuedarse.configure(background="green",foreground="white")
-
-            else:
-                if self.tema.get()=="oscuro":
-                    self.botonQuedarse.configure(background="black",foreground="red")
-                else:
-                    self.botonQuedarse.configure(background="red",foreground="white")
+                self.botonQuedarse.configure(background="green",foreground="white")
 
             #============
             if self.videos.get():#Si estan activados los videos
@@ -516,12 +533,12 @@ class Aplicacion:
             
             #============
             for i in range(5):
-                self.lista_labels_skynet[i].config(text="   ",background="brown",foreground="white")
-                self.lista_labels_jugador[i].config(text="   ",background="brown",foreground="white")
+                self.lista_labels_skynet[i].config(text="",background="brown")
+                self.lista_labels_jugador[i].config(text="",background="brown")
 
             self.suma_total_skynet_label.configure(text="",foreground="white")
             self.suma_total_jugador_label.configure(text="0",foreground="white")
-            self.resultado_label.configure(text="\n")
+            self.resultado_label.configure(text="")
             self.label_fichas_sumadas_jugador.configure(foreground="white",text="\n\n\n\n")
 
             self.entrada_apuesta.configure(state=tk.NORMAL)
@@ -589,7 +606,7 @@ def abrir_ventana_camara(eleccion,pov):
 def abrir_ventana_usuario():#Ventana secundaria donde se introduce el nombre de usuario
     ventana_usuario = tk.Toplevel()
     ventana_usuario.title("Nombre de usuario")
-    ventana_usuario.configure(background="")
+    ventana_usuario.configure(background="dark slate gray")
 
     label_cartel_1=tk.Label(ventana_usuario,text="Ingresa tu nombre de usuario!",foreground="gold2",background="dark slate gray",font=("Gabriola", 20))
     label_cartel_1.grid(column=0, row=0)
