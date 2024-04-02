@@ -1,434 +1,411 @@
-#Version utilizada: python 3.11.4
 import tkinter as tk
-import tkinter.font as tkFont
-import random
-from PIL import Image
-from PIL import ImageTk
-import cv2
-import imutils
-import os
+from tkinter.font import Font
+from random import randint,choice
 
-datos_sesion=["",""]
-nombre_introducido=False
+nombre_global="" #nombre del usuario actual
+fichas_global="0" #fichas del usuario actual
+nombre_introducido=False#indica si el jugador ya introdujo su nombre
+dificultad="normal" #dificultad por defecto
 
-def dividir_cifras(numero):#le agrega comas al numero
-    texto = "{:,}"
-    texto = texto.format(numero)
-    return texto
-
-def carta_aleatoria(): #Devuelve una carta aleatoria para el jugador:
-    return random.randint(1,10)
+dividir_cifras=lambda numero,texto="{:,}":texto.format(numero)#funcion que le agrega comas al numero introducido
+carta_aleatoria=lambda:randint(1,10)#Funcion que devuelve una carta aleatoria para el jugador
 
 def carta_aleatoria_skynet(total_skynet):#Devuelve una carta aleatoria para sktnet:
-    #se genera un numero entre 1 y 11:
-    carta_generada=random.randint(1,11)
-
-    #leer las reglas del juego para entender lo siguiente:
-    #Si el numero generado es igual a 11 (as):
-    if carta_generada==11:
-        #Si con 11 se pasa de 21:
-        if carta_generada + total_skynet>21:
-            #se transforma en 1 para que no se pase de 21:
-            carta_generada=1
-
+    carta_generada=randint(1,11)
+    if carta_generada==11 and (carta_generada + total_skynet)>21:
+        carta_generada=1
     return carta_generada
 
 def convertir_carta(carta): #Si es necesario, a partir de el numero de la carta generada devuelve una letra:
     if carta==10:
-        return random.choice(["Q","J","K"])
-    
-    #si la carta vale 1 o 11 (11 solo para skynet):
+        return choice(["Q","J","K"])
     elif carta==1 or carta==11:
         return "A"
-    
     else:
         return str(carta)
-
-def actualizar_record():#Actualiza el scoreboard con el nuevo record:   
-    archivo_records = open("carpeta_datos/records.txt","r")
-    lineas_texto=archivo_records.read()
-    archivo_records.close()
-
-    texto= dividir_cifras(int(datos_sesion[1]))
-
-    lineas_texto_separado = lineas_texto.split()
     
-    #si el record que se quiere agregar es de alguien que ya estaba en el scoreboard:
-    if datos_sesion[0] in lineas_texto_separado:
-        
-        #se busca las fichas que tenia en el scoreboard:
-        posicion = (lineas_texto_separado.index(datos_sesion[0])+1)
-        record_anterior_string = str(lineas_texto_separado[posicion])
-        record_anterior_string= record_anterior_string.replace(",","")
-        record_anterior=int(record_anterior_string)
+def separar_nombre_record(lista):#a partir de una lista, la separa en nombres, records y la ordena
+    n=2
+    nombres=[]
+    records=[]
+    diccionario_final={}
+    for elemento in lista:
+        if n % 2 == 0: #si "n" es par es porque esta leyendo un nombre
+            nombres.append(elemento)
+        else:
+            records.append(elemento)
+        n+=1
 
-        #se compara el record anterior con el record que se quiere agregar
-        #Si el record actual es mejor que el de antes se actualiza:
-        if int(datos_sesion[1])>int(record_anterior):
-            #se sobreescribe el record:
-            lineas_texto_separado[posicion]=texto
+    diccionario = dict(zip(nombres, records))#se juntan las listas en un solo dicionario
+    for elemento in sorted(diccionario,key= lambda elemento: int(diccionario[elemento]),reverse=True):#se ordena el diccionario por sus valores
+        diccionario_final[elemento]=diccionario[elemento]
 
-    #Si el jugador no estaba en el scoreboard:
-    else:
-        datos_sesion[1]=texto
-        #se agregan los nuevos datos a la lista:
-        lineas_texto_separado.extend(datos_sesion)
-                
-    #se transforma la lista anterior en un string
-    lineas_texto_final = " ".join(lineas_texto_separado)
+    return diccionario_final
 
-    #se guarda el string y se guardan en el archivo
-    archivo_records = open("carpeta_datos/records.txt","w")
-    archivo_records.write(lineas_texto_final)
-    archivo_records.close()
+def leer_archivo():#Funcion que devuelve los scoreboards ordenados
+    try:
+        with open("carpeta_datos/records.txt","r") as archivo_records:
+            linea1=(archivo_records.readline()).split("-")
+            linea2=(archivo_records.readline()).split("-")
 
-#============
+        diccionario_normal=separar_nombre_record(linea1)
+        diccionario_hardcore=separar_nombre_record(linea2)
+
+        return diccionario_normal,diccionario_hardcore
+    except FileNotFoundError:
+        print("ERROR: No se encontro el arcivo _records.txt_")
+        return "",""
+    except:
+        print("Error al leer el archivo")
+
+
+def actualizar_record():#Actualiza el archivo con el nuevo record:   
+    datos_normal,datos_hardcore=leer_archivo()
+    normal_texto_final = ""
+    hardcore_texto_final = ""
+    
+    if dificultad=="normal":#si la dificultad es normal se busca en el modo normal
+        if not nombre_global in datos_normal:#si el nombre no esta guardado en el archivo
+            datos_normal[nombre_global]=fichas_global
+
+        else:#si ya estaba guardado comprueba si el record es mejor
+            if int(fichas_global)>int(datos_normal[nombre_global]):
+                datos_normal[nombre_global]=fichas_global
+
+    elif dificultad=="hardcore":#si la dificultad es hardcore se busca en el modo hardcore
+        if not nombre_global in datos_hardcore:#si el nombre no esta guardado en el archivo
+            datos_hardcore[nombre_global]=fichas_global
+
+        else:#si ya estaba guardado comprueba si el record es mejor
+            if int(fichas_global)>int(datos_hardcore[nombre_global]):
+                datos_hardcore[nombre_global]=fichas_global
+    
+    for clave, valor in datos_normal.items():#se crea el string final
+        normal_texto_final += clave + "-" + valor + "-"
+    
+    for clave, valor in datos_hardcore.items():
+        hardcore_texto_final += clave + "-" + valor + "-"
+
+    try:
+        with open("carpeta_datos/records.txt","w") as archivo_records:
+            archivo_records.write(normal_texto_final+"\n"+hardcore_texto_final)#se escribe el archivo´
+            
+    except FileNotFoundError:
+        print("ERROR: No se encontro el arcivo _records.txt_")
+
 #Ventana principal:
 class Aplicacion:
     def __init__(self):
         self.ventana1=tk.Tk()
         self.ventana1.title("Blackjack")
+        self.ventana1.configure(bg="dark slate gray")
 
-        fuente=tkFont.Font(family="Lucida Grande",size=18)
-        fuente_2=tkFont.Font(family="Lucida Grande",size=20)
-        fuente_3=tkFont.Font(family="Impact",size=12)
-        global fuente_4
-        fuente_4=tkFont.Font(family="Segoe Script",size=16)
-        self.fuente_fea=tkFont.Font(family="fixedsys",size=12)
-        self.fuente_fea_mediana=tkFont.Font(family="fixedsys",size=17)
-        self.fuente_fea_grande=tkFont.Font(family="fixedsys",size=40)
+        #Fuentes que se usan en el programa
+        fuente=Font(family="Lucida Grande",size=18)
+        fuente_2=Font(family="Lucida Grande",size=20)
+        fuente_3=Font(family="Impact",size=12)
+        fuente_4=Font(family="Segoe Script",size=16)
+        self.fuente_fea=Font(family="fixedsys",size=12)
+        self.fuente_fea_grande=Font(family="fixedsys",size=40)
         
         #========================
-        self.lista_cartas_skynet=[]
-        self.lista_labels_skynet=[]
+        self.lista_cartas_skynet=[]#donde se guarda el valor real de la carta de skynet
+        self.lista_labels_skynet=[]#donde se guardan las labels de skynet
 
-        self.lista_cartas_jugador=[]
-        self.lista_labels_jugador=[]
+        self.lista_cartas_jugador=[]#donde se guarda el valor real de la carta del jugador
+        self.lista_labels_jugador=[]#donde se guardan las labels del jugador
 
-        self.total_cartas_skynet=0
-        self.total_cartas_jugador=0
+        self.total_cartas_jugador=0 #total del jugador
+        self.total_cartas_skynet=0#total de skynet
+        
+        self.fichas_jugador=100#donde se guardan las variables del jugador
+        self.fichas_sumadas=0#donde se guardan las fichas que suma o pierde el jugador        
 
-        self.fichas_jugador=100
-        self.fichas_sumadas=0        
-
-        self.apuesta=tk.StringVar(value="10")
-        self.record=tk.StringVar(value="100")
-
-        #========================
-        self.contador= 0
-        self.ases_totales = 0
+        self.apuesta=tk.StringVar(value="10")#donde se guarda las fichas que apuesta el jugador
+        self.record=tk.StringVar(value="100")#donde se guarda el record de la sesion actual
 
         #========================
-        self.se_ha_apostado=tk.BooleanVar(value=False)
-        self.jugador_gano=tk.BooleanVar(value=False)
-        self.jugador_empato=tk.BooleanVar(value=False)
+        self.ases_totales = 0#contador de ases
+        self.contador= 0 #y contador que se usa al pedir cartas
+
+        #========================
+        self.se_ha_apostado=tk.BooleanVar(value=False)#indica si el jugador ingreso una apuesta
+        self.jugador_gano=tk.BooleanVar(value=False)#indica si el jugador gano la partida
+        self.jugador_empato=tk.BooleanVar(value=False)#indica si el jugador empato la partida
         self.continuar=tk.BooleanVar(value=False)#cambia el boton pedir por continuar
-
-        self.videos=tk.BooleanVar(value=True)
-        self.radio_video_variable = tk.IntVar(value=1)
-        self.animaciones=tk.BooleanVar(value=True)
-        self.radio_animaciones_variable = tk.IntVar(value=1)
-        self.radio_tema_variable=tk.IntVar(value=0)
-        self.tema=tk.StringVar(value="clasico")
-
+        self.reiniciar=tk.BooleanVar(value=False)
+        self.radio_dificultad=tk.IntVar(value=0)
 
         #========================
-        for i in range (5):
-            self.frame_carta=tk.LabelFrame(self.ventana1,bd=2,padx=1,pady=1,background="orange",relief="flat")
+        for i in range (5):#for en donde se crean las labels de las cartas y los frames para que quede lindo
+            self.frame_carta=tk.LabelFrame(self.ventana1,bd=2,padx=1,pady=1,bg="orange",relief="flat")
             self.frame_carta.grid(column=i+1, row=0)
-            self.label_carta=tk.Label(self.frame_carta,text="", background="brown",foreground="black",font=fuente_2,width=2,height=2)
+            self.label_carta=tk.Label(self.frame_carta,text="", bg="brown",fg="black",font=fuente_2,width=2,height=2)
             self.label_carta.grid(column=0,row=0)
             self.lista_labels_skynet.insert(i,self.label_carta)
 
-            self.frame_carta=tk.LabelFrame(self.ventana1,bd=2,padx=1,pady=1,background="orange",relief="flat")
+            self.frame_carta=tk.LabelFrame(self.ventana1,bd=2,padx=1,pady=1,bg="orange",relief="flat")
             self.frame_carta.grid(column=i+1, row=5)
-            self.label_carta_jugador=tk.Label(self.frame_carta,text="", background="brown",foreground="black",font=fuente_2,width=2,height=2)
+            self.label_carta_jugador=tk.Label(self.frame_carta,text="", bg="brown",fg="black",font=fuente_2,width=2,height=2)
             self.label_carta_jugador.grid(column=0, row=0)
             self.lista_labels_jugador.insert(i,self.label_carta_jugador)
 
         #========================
-        self.suma_total_skynet_label=tk.Label(self.ventana1,font=self.fuente_fea_grande)
+        #label donde se muestra el total de skynet al finalizar
+        self.suma_total_skynet_label=tk.Label(self.ventana1,font=self.fuente_fea_grande,bg="dark slate gray",fg="white")
         self.suma_total_skynet_label.grid(column=6, row=0,columnspan=2)
 
-        self.suma_total_jugador_label=tk.Label(self.ventana1,text="",font=self.fuente_fea_grande)
+        #label donde se muestra el total del jugador
+        self.suma_total_jugador_label=tk.Label(self.ventana1,text="",font=self.fuente_fea_grande,bg="dark slate gray",fg="white")
         self.suma_total_jugador_label.grid(column=0, row=10,columnspan=2)
 
-        self.resultado_label=tk.Label(self.ventana1,text="",font=fuente_3)
+        #label donde se muestra el mensaje con el resultado de la partida
+        self.resultado_label=tk.Label(self.ventana1,text="",font=fuente_3,bg="dark slate gray")
         self.resultado_label.grid(column=2, row=10,columnspan=3)
 
-        self.label_fichas_jugador=tk.Label(self.ventana1,text="fichas: "+str(self.fichas_jugador),font=fuente_4)
+        #label que muestra las fichas que tiene el jugador
+        self.label_fichas_jugador=tk.Label(self.ventana1,text="fichas: "+str(self.fichas_jugador),font=fuente_4,bg="dark slate gray",fg="white")
         self.label_fichas_jugador.grid(column=2, row=8,columnspan=3)
 
-        self.label_fichas_sumadas_jugador=tk.Label(self.ventana1,text="\n\n\n\n",font=self.fuente_fea)
-        self.label_fichas_sumadas_jugador.grid(column=3, row=6,rowspan=2,pady=20)
+        #label donde se muestran las fichas sumadas o restadas del jugador
+        self.label_fichas_sumadas_jugador=tk.Label(self.ventana1,text="",font=self.fuente_fea,bg="dark slate gray")
+        self.label_fichas_sumadas_jugador.grid(column=3, row=6,rowspan=2,pady=50)
 
-        self.label_record=tk.Label(self.ventana1,text="Record actual: "+self.record.get(),font=self.fuente_fea)
-        self.label_record.grid(column=5,row=9,columnspan=2)
+        #label donde se muestra el record de la sesion actual
+        self.label_record=tk.Label(self.ventana1,text="Record actual: "+self.record.get(),font=self.fuente_fea,bg="dark slate gray",fg="white")
+        self.label_record.grid(column=5,row=8,columnspan=2)
 
-        self.label1=tk.Label(self.ventana1,text="Blackjack!")
+        #label de Blackjack!
+        self.label1=tk.Label(self.ventana1,text="Blackjack!",font=fuente_4,bg="dark slate gray",fg="white")
         self.label1.grid(column=2, row=2,columnspan=3,padx=100,pady=80)
         
-        #============
-        self.botonPedir=tk.Button(self.ventana1,width=20,  text="Pedir", command=self.pedir,bd=6)
+        #============BOTONES==========
+        #boton para pedir mas cartas
+        self.botonPedir=tk.Button(self.ventana1,width=20,  text="Pedir", command=self.pedir,bd=6,bg="maroon",fg="white",activebackground="gray",activeforeground="white",font=fuente_4,relief="sunken")
         self.botonPedir.grid(column=0, row=7,columnspan=2)
 
-        self.botonQuedarse=tk.Button(self.ventana1,width=20, text="Quedarse", command=self.quedarse,state=tk.DISABLED,bd=6)
+        #boton para no pedir mas cartas
+        self.botonQuedarse=tk.Button(self.ventana1,width=20, text="Quedarse", command=self.quedarse,state=tk.DISABLED,bd=6,bg="maroon",fg="white",activebackground="gray",activeforeground="white",font=fuente_4,relief="sunken")
         self.botonQuedarse.grid(column=5, row=7,columnspan=2)
-        
-        self.botonCambiar=tk.Button(self.ventana1,width=20,  text="", command=self.cambiar,font=fuente,bd=0,relief="sunken",state=tk.DISABLED)
+
+        #boton para cambiar un as por un 11
+        self.botonCambiar=tk.Button(self.ventana1,width=20,  text="", command=self.cambiar,font=fuente,bd=0,relief="sunken",state=tk.DISABLED,bg="dark slate gray")
         self.botonCambiar.grid(column=0, row=8,columnspan=2,rowspan=2)
 
-        self.botonRecords=tk.Button(self.ventana1,text="Scoreboard",font=("Segoe Script", 14), command=self.record_boton)
-        self.botonRecords.grid(column=5, row=10,columnspan=2)
+        #boton para ingresar el nombre de usuario y ver el scoreboard
+        self.botonRecords=tk.Button(self.ventana1,text="Scoreboard",font=("Segoe Script", 14), command=self.record_boton,bg="brown",fg="gold2")
+        self.botonRecords.grid(column=5, row=9,columnspan=2)
         
-        self.entrada_apuesta=tk.Entry(self.ventana1, width=15,font=fuente_4, textvariable=self.apuesta,background="purple",foreground="white",insertbackground="white",borderwidth=5,justify=tk.CENTER)
+        #entrada donde el jugador ingresa las fichas que quiere apostar
+        self.entrada_apuesta=tk.Entry(self.ventana1, width=15,font=fuente_4, textvariable=self.apuesta,bg="purple",fg="white",insertbackground="white",borderwidth=5,justify=tk.CENTER)
         self.entrada_apuesta.grid(column=3, row=9)
 
-        self.boton_configuracion=tk.Button(self.ventana1,width=15,  text="Configuración",font=self.fuente_fea, command=self.configuracion)
-        self.boton_configuracion.grid(column=5, row=11,columnspan=2)
-        self.fondo=""
-        self.letra=""
+        self.boton_configuracion=tk.Button(self.ventana1,width=15,  text="Dificultad",font=self.fuente_fea, command=self.configuracion)
+        self.boton_configuracion.grid(column=5, row=10,columnspan=2)
 
-        global cambiar_tema
-        def cambiar_tema(tema):
-            if tema=="oscuro":
-                self.fondo="black"
-                self.letra="white"
-                self.botonPedir.configure(background="purple4",foreground="white",activebackground="grey20",activeforeground="white",font=fuente_4,relief="sunken")
-                self.botonQuedarse.configure(background="purple4",foreground="white",activebackground="grey20",activeforeground="white",font=fuente_4,relief="sunken")
-                self.botonRecords.configure(background="black",foreground="gold2")
-                self.boton_configuracion.configure(background="black",foreground="purple")
-                self.label1.configure(font=fuente_4)
-                self.label_fichas_jugador.configure(font=fuente_4)
-                self.entrada_apuesta.configure(background="purple",font=fuente_4)
-
-            elif tema=="claro":
-                self.fondo="mistyrose2"
-                self.letra="black"
-                self.botonPedir.configure(background="maroon",foreground="white",activebackground="grey20",activeforeground="black",font=fuente_4,relief="sunken")
-                self.botonQuedarse.configure(background="maroon",foreground="white",activebackground="grey20",activeforeground="black",font=fuente_4,relief="sunken")
-                self.botonRecords.configure(background="dark slate gray",foreground="gold2")
-                self.boton_configuracion.configure(background="white",foreground="black")
-                self.label1.configure(font=fuente_4)
-                self.label_fichas_jugador.configure(font=fuente_4)
-                self.entrada_apuesta.configure(background="purple",font=fuente_4)
+        global reiniciar_blackjack
+        def reiniciar_blackjack():#funcion para reiniciar la partida (resetea todo por defecto)
+            self.total_cartas_skynet=self.ases_totales =self.contador = 0
+            self.lista_cartas_jugador=[]
+            self.lista_cartas_skynet=[]
+            self.jugador_gano.set(False)
+            self.se_ha_apostado.set(False)
+            self.jugador_empato.set(False)
+            self.continuar.set(False)
             
-            elif tema=="clasico":
-                self.fondo="dark slate gray"
-                self.letra="white"
-                self.botonPedir.configure(background="maroon",foreground="white",activebackground="gray",activeforeground="white",font=fuente_4,relief="sunken")
-                self.botonQuedarse.configure(background="maroon",foreground="white",activebackground="gray",activeforeground="white",font=fuente_4,relief="sunken")
-                self.botonRecords.configure(background="brown",foreground="gold2")
-                self.boton_configuracion.configure(background="white",foreground="purple")
-                self.label1.configure(font=fuente_4)
-                self.label_fichas_jugador.configure(font=fuente_4)
-                self.entrada_apuesta.configure(background="purple",font=fuente_4)
+            #============
+            for i in range(5):
+                self.lista_labels_skynet[i].config(text="",bg="brown")
+                self.lista_labels_jugador[i].config(text="",bg="brown")
 
-            elif tema=="pastel":
-                self.fondo="plum2"
-                self.letra="orchid4"
-                self.botonPedir.configure(background="khaki",foreground="hotpink1",activebackground="dark khaki",activeforeground="white",font=self.fuente_fea_mediana,relief="ridge")
-                self.botonQuedarse.configure(background="khaki",foreground="hotpink1",activebackground="dark khaki",activeforeground="white",font=self.fuente_fea_mediana,relief="ridge")
-                self.botonRecords.configure(background="hotpink",foreground="white",activebackground="deeppink4",activeforeground="white")
-                self.boton_configuracion.configure(background="mediumpurple1",foreground="white",activebackground="mediumpurple4",activeforeground="white")
-                self.label1.configure(font=self.fuente_fea_mediana)
-                self.label_fichas_jugador.configure(font=self.fuente_fea_mediana)
-                self.entrada_apuesta.configure(background="mediumpurple1",font=self.fuente_fea_mediana)
+            self.suma_total_skynet_label.configure(text="",fg="white")
+            self.suma_total_jugador_label.configure(text="",fg="white")
+            self.resultado_label.configure(text="")
+            self.label_fichas_sumadas_jugador.configure(fg="white",text="")
 
+            self.botonPedir.configure(state=tk.NORMAL,bg="maroon")
+            self.botonQuedarse.configure(state=tk.DISABLED,text="Quedarse",bg="maroon",fg="white")
 
-            self.resultado_label.configure(background=self.fondo,foreground=self.letra)
-            self.suma_total_skynet_label.configure(background=self.fondo,foreground="red",)
-            self.botonCambiar.configure(background=self.fondo)
-            self.suma_total_jugador_label.configure(background=self.fondo,foreground=self.letra)
-            self.label1.configure(background=self.fondo,foreground=self.letra)
-            self.label_record.configure(background=self.fondo,foreground=self.letra)
-            self.label_fichas_sumadas_jugador.configure(background=self.fondo,foreground=self.letra)
-            self.label_fichas_jugador.configure(background=self.fondo,foreground=self.letra)
-            self.ventana1.configure(background=self.fondo)
-        cambiar_tema(self.tema.get())
-
-        global escribir
-        def escribir(inicio,palabra_a_escribir,label,ventana):
+        global escribir #se hace global para que se use en todas las ventanas
+        def escribir(inicio,palabra_a_escribir,label,ventana):#efecto de escritura (animacion)
             palabra_final=inicio
-            if self.animaciones.get():
-                tiempo=700//len(palabra_a_escribir)
-                for letra in palabra_a_escribir:
-                    palabra_final+=letra
-                    ventana.after(tiempo,label.config(text=palabra_final))
-                    ventana.update()
-            else:
-                palabra_final=inicio+palabra_a_escribir
-                label.config(text=palabra_final)
-        
+            tiempo=500//len(palabra_a_escribir)
+            for letra in palabra_a_escribir:
+                palabra_final+=letra
+                ventana.after(tiempo,label.config(text=palabra_final))
+                ventana.update()
+    
         self.ventana1.mainloop()
-        
-#============
-    def configuracion(self):
+
+    def configuracion(self): #cuando se presiona el boton configuracion (dificultad)
         ventana_configuracion = tk.Toplevel()
         ventana_configuracion.title("Configuracion del juego")
-        ventana_configuracion.configure(background="black")
+        ventana_configuracion.configure(bg="dark slate gray")
 
-        cuadro1=tk.LabelFrame(ventana_configuracion,text="Live Camera",bd=5,padx=15,pady=15,background="black",font=self.fuente_fea,foreground="white")
-        cuadro1.grid(column=0,row=0)
+        cuadro1=tk.LabelFrame(ventana_configuracion,text="Dificultad",bd=5,padx=30,pady=20,bg="dark slate gray",font=self.fuente_fea,fg="white")
+        cuadro1.grid(column=0,row=2)
 
-        tk.Radiobutton(cuadro1, text="Habilitar", variable=self.radio_video_variable, value=1,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=1)
-        tk.Radiobutton(cuadro1, text="Desabilitar", variable=self.radio_video_variable, value=2,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=2)
+        cuadro2=tk.LabelFrame(ventana_configuracion,text="Explicacion",bd=5,bg="dark slate gray",font=self.fuente_fea,fg="white")
+        cuadro2.grid(column=0,row=3)
 
-        cuadro2=tk.LabelFrame(ventana_configuracion,text="Animaciones",bd=5,padx=15,pady=15,background="black",font=self.fuente_fea,foreground="white")
-        cuadro2.grid(column=0,row=1)
+        explicacion="Cambiar de modo reiniciara\n la partida actual\n"
+        label_explicacion=tk.Label(cuadro2,text=explicacion,bg="dark slate gray",fg="white")
+        label_explicacion.grid(column=0,row=0)
         
-        tk.Radiobutton(cuadro2, text="Habilitar", variable=self.radio_animaciones_variable, value=1,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=1)
-        tk.Radiobutton(cuadro2, text="Desabilitar", variable=self.radio_animaciones_variable, value=2,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=2)
+        def normal_exp():#cuando se presione el radiobutton del Modo Normal
+            explicacion=" En el modo Normal se \n   puede apostar tan poco    \n como lo quiera el jugador "
+            label_explicacion.configure(text=explicacion)
 
-        cuadro3=tk.LabelFrame(ventana_configuracion,text="Tema",bd=5,padx=30,pady=20,background="black",font=self.fuente_fea,foreground="white")
-        cuadro3.grid(column=0,row=2)
+        def hardcore_exp():#Cuando se presiona el radiobutton del Modo Hardcore
+            explicacion="En el modo Hardcore se \napuestan todas las fichas, si\n perdes empezas de nuevo"
+            label_explicacion.configure(text=explicacion)
         
-        tk.Radiobutton(cuadro3, text="Clásico", variable=self.radio_tema_variable, value=0,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=1)
-        tk.Radiobutton(cuadro3, text="Claro", variable=self.radio_tema_variable, value=1,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=2)
-        tk.Radiobutton(cuadro3, text="Oscuro", variable=self.radio_tema_variable, value=2,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=3)
-        tk.Radiobutton(cuadro3, text="pastel", variable=self.radio_tema_variable, value=3,pady=10,background="black",font=self.fuente_fea,foreground="purple",activeforeground="green",activebackground="black").grid(column=0,row=4)
+        #Radiobuttons con las opciones de dificultad
+        tk.Radiobutton(cuadro1, text="Normal", variable=self.radio_dificultad, value=0,pady=10,bg="dark slate gray",font=self.fuente_fea,fg="#009BFF",activeforeground="green",activebackground="dark slate gray",command=normal_exp).grid(column=0,row=1)
+        tk.Radiobutton(cuadro1, text="Hardcore", variable=self.radio_dificultad, value=1,pady=10,bg="dark slate gray",font=self.fuente_fea,fg="red",activeforeground="green",activebackground="dark slate gray",command=hardcore_exp).grid(column=0,row=2)
 
-        def aplicar():
-            if self.radio_video_variable.get()==1:
-                self.videos.set(True)
-            else:
-                self.videos.set(False)
+        def reiniciar():#Boton para aplicar los cambios y reiniciar la partida
+            global dificultad
+            if self.radio_dificultad.get()==0:#si se eligio el Modo Normal
+                dificultad="normal"
+                self.label1.configure(text="Blackjack!",fg="white")
+                self.apuesta.set(10)
+                self.entrada_apuesta.configure(state="normal")
 
+            elif self.radio_dificultad.get()==1:#si se eligio el Modo Hardcore
+                dificultad="hardcore"
+                self.label1.configure(text="Hardcore",fg="red")
+                self.apuesta.set(100)
+                self.entrada_apuesta.configure(state="disabled")
+            
+            self.label_record.configure(text="Record actual: 100")
+            self.label_fichas_jugador.configure(text="fichas: 100")
+            self.record.set("100")
+            self.fichas_jugador=100
+            reiniciar_blackjack()#se reinicia todo
 
-            if self.radio_animaciones_variable.get()==1:
-                self.animaciones.set(True)
-            else:
-                self.animaciones.set(False)
-
-
-            if self.radio_tema_variable.get()==0:
-                self.tema.set("clasico")
-            elif self.radio_tema_variable.get()==1:
-                self.tema.set("claro")
-            elif self.radio_tema_variable.get()==2:
-                self.tema.set("oscuro")
-            elif self.radio_tema_variable.get()==3:
-                self.tema.set("pastel")
-
-            cambiar_tema(self.tema.get())
             ventana_configuracion.after(300,ventana_configuracion.destroy)
 
-        boton_aplicar=tk.Button(ventana_configuracion,width=20,  text="Aplicar", command=aplicar,font=self.fuente_fea,background="purple",foreground="white")
-        boton_aplicar.grid(column=0,row=3)
+        tk.Button(ventana_configuracion,width=20,  text="Reiniciar", command=reiniciar,font=self.fuente_fea,bg="brown",fg="white").grid(column=0,row=4)
+        ventana_configuracion.focus()
 
     def record_boton(self):#Boton Ingresar / mostrar Scoreboard
-        if nombre_introducido==False:#si el jugador aun no ha ingresado su usuario
+        if nombre_introducido==False:#si el jugador aun no ha ingresado su nombre usuario
             abrir_ventana_usuario()
-        
         else: #Si el jugador ya ingreso su nombre:
             abrir_ventana_scoreboard()
 
     def pedir(self):#Boton pedir otra carta
-        #Habilitar boton quedarse:
-        self.botonQuedarse.configure(state=tk.NORMAL)
-        self.label_fichas_sumadas_jugador.configure(text="\n\n\n\n")
+        self.botonQuedarse.configure(state=tk.NORMAL,bg="maroon")
+        self.label_fichas_sumadas_jugador.configure(text="")
 
-        if self.se_ha_apostado.get()==False:#Si se aposto:
-            if int(self.apuesta.get()) > 0 and int(self.apuesta.get()) <= self.fichas_jugador and self.fichas_jugador>0:
-                self.fichas_jugador-=int(self.apuesta.get())#se resta lo apostado a la cantidad total de fichas:
-                self.label_fichas_jugador.configure(text="fichas: "+dividir_cifras(self.fichas_jugador))
-                self.label_fichas_sumadas_jugador.configure(foreground="red",text="\n\n\n\n-"+(self.apuesta.get())) 
+        if self.contador==0:
+            self.lista_cartas_skynet.insert(0,carta_aleatoria_skynet(self.total_cartas_skynet))
+            self.lista_labels_skynet[0].config(text=convertir_carta(self.lista_cartas_skynet[0]),bg="white",fg="black")           
 
-                self.se_ha_apostado.set(True)
-                self.entrada_apuesta.configure(state=tk.DISABLED)#se desactiva la entrada de la apuesta:
+            self.total_cartas_skynet=sum(self.lista_cartas_skynet)
+            self.suma_total_skynet_label.configure(text=self.total_cartas_skynet)
+
+        #=================
+        if self.se_ha_apostado.get()==False:#Si no se aposto:
+            try:
+                if int(self.apuesta.get()) > 0 and int(self.apuesta.get()) <= self.fichas_jugador and self.fichas_jugador>0:
+
+                    self.fichas_jugador-=int(self.apuesta.get())#se resta lo apostado a la cantidad total de fichas:
+                    self.label_fichas_jugador.configure(text="fichas: "+dividir_cifras(self.fichas_jugador))
+                    self.label_fichas_sumadas_jugador.configure(fg="red",text="-"+(self.apuesta.get())) 
+
+                    self.se_ha_apostado.set(True)
+                    self.entrada_apuesta.configure(state=tk.DISABLED)#se desactiva la entrada de la apuesta:
+                else:
+                    self.resultado_label.configure(text="Fichas insuficientes",fg="#F05000")
+            except:
+                self.apuesta.set(0)
+                self.resultado_label.configure(text="Solo se aceptan numeros",fg="#F05000")
 
         #=================
         if self.contador==0:#Cuando empiece el juego te da otra mas, asi son dos (reglas)
             self.lista_cartas_jugador.insert(self.contador,carta_aleatoria())
-            self.lista_labels_jugador[self.contador].config(text=convertir_carta(self.lista_cartas_jugador[self.contador]),background="white")
+            self.lista_labels_jugador[self.contador].config(text=convertir_carta(self.lista_cartas_jugador[self.contador]),bg="white")
             
-            if self.lista_cartas_jugador[self.contador] ==1:
+            if self.lista_cartas_jugador[self.contador] ==1:#si al jugador le toco un as
                 self.ases_totales += 1
-                self.lista_labels_jugador[self.contador].config(background="yellow")
+                self.lista_labels_jugador[self.contador].config(bg="yellow")
+
             self.contador+=1
         
-        if self.contador<5:
+        #=================
+        
+        if self.contador<5:#si el jugador tiene menos de 5 cartas
+
             self.lista_cartas_jugador.insert(self.contador,carta_aleatoria())
-            self.lista_labels_jugador[self.contador].config(text=convertir_carta(self.lista_cartas_jugador[self.contador]),background="white")
-            if self.lista_cartas_jugador[self.contador] ==1:
+            self.lista_labels_jugador[self.contador].config(text=convertir_carta(self.lista_cartas_jugador[self.contador]),bg="white")
+
+            if self.lista_cartas_jugador[self.contador] ==1:#si al jugador le toco un as
                 self.ases_totales += 1
-                self.lista_labels_jugador[self.contador].config(background="yellow")
-        self.total_cartas_jugador=sum(self.lista_cartas_jugador)
-                    
-        if self.ases_totales > 0:#Si se detecta que hay ases
-            self.botonCambiar.configure(state=tk.NORMAL,background="black",foreground="yellow",text="Cambiar",bd=6)
-            if self.tema.get()=="oscuro":
-                self.botonCambiar.configure(background="black",foreground="yellow")
-            else:
-                self.botonCambiar.configure(background="yellow",foreground="black")
-
-        #Se actualiza el total de las cartas del jugador:
-        self.suma_total_jugador_label.configure(text=str(self.total_cartas_jugador),foreground="white")
-        if self.tema=="clasico" or self.tema=="claro":
-            self.botonQuedarse.configure(background="brown")
-        elif self.tema=="oscuro":
-            self.botonQuedarse.configure(background="black")
-        elif self.tema=="pastel":
-            self.botonQuedarse.configure(background="khaki")
-
-        if self.total_cartas_jugador ==21:#Si llega justo a 21:
-            self.suma_total_jugador_label.configure(foreground="magenta")
-            self.botonQuedarse.configure(background="purple",foreground="white")
-
-        
-        if self.contador < 5:#se le suma 1 cada vez que se presione el boton pedir:
+                self.lista_labels_jugador[self.contador].config(bg="yellow")
             self.contador+=1
+        else:
+            self.botonPedir.config(state=tk.DISABLED)
 
-    def cambiar(self):#Boton Cambiar ases por 11
-        #Comprobar cual carta es la que tiene el As para asignarle el 10
+        self.total_cartas_jugador=sum(self.lista_cartas_jugador)#se actualiza el total del jugador
+        self.suma_total_jugador_label.configure(text=str(self.total_cartas_jugador),fg="white")
+
+        if self.ases_totales>0:
+            self.botonCambiar.configure(state=tk.NORMAL,bg="yellow",fg="black",text="Cambiar",bd=6)
+
+        if self.total_cartas_jugador>20:
+            self.botonPedir.config(state=tk.DISABLED)
+
+        elif self.total_cartas_jugador ==21:#Si llega justo a 21:
+            self.suma_total_jugador_label.configure(fg="magenta")
+            self.botonQuedarse.configure(bg="purple",fg="white")        
+
+    #=================
+    def cambiar(self):#Boton para cambiar ases por 11
+        #se busca en que carta esta el as y se aplica el 11
         indice = self.lista_cartas_jugador.index(1)
         self.lista_cartas_jugador[indice]=11
-        self.lista_labels_jugador[indice].config(text=11,background="white")
+        self.lista_labels_jugador[indice].config(text=11,bg="white")
         
-        self.ases_totales-=1#Restar 1 al contador de Ases
+        self.ases_totales-=1
 
         #Corregir el resultado al total
         self.total_cartas_jugador+=10
         self.suma_total_jugador_label.configure(text=str(self.total_cartas_jugador))
 
         if self.total_cartas_jugador ==21:#Si con el cambio llega justo a 21:
-            self.suma_total_jugador_label.configure(foreground="magenta")
-            self.botonQuedarse.configure(background="purple",foreground="white")
+            self.suma_total_jugador_label.configure(fg="magenta")
+            self.botonQuedarse.configure(bg="purple",fg="white")
 
         if self.ases_totales < 1:#Si no hay mas ases se desactiva el boton:
-            self.botonCambiar.configure(state=tk.DISABLED,text="",bd=0)
-            if self.tema.get()=="oscuro":
-                self.botonCambiar.configure(background=self.fondo)
-            elif self.tema.get()=="claro":
-                self.botonCambiar.configure(background=self.fondo)
-            elif self.tema.get()=="clasico":
-                self.botonCambiar.configure(background=self.fondo)
-            elif self.tema.get()=="pastel":
-                self.botonCambiar.configure(background=self.fondo)
-            self.botonCambiar.configure(state=tk.DISABLED,text="",bd=0)
-         
-    def quedarse(self):#Boton Quedarse
-        record_mejorado=False
-        self.botonPedir.configure(state=tk.DISABLED,background="grey")
-        self.botonCambiar.configure(state=tk.DISABLED,background=self.fondo,text="",bd=0)
+            self.botonCambiar.configure(state=tk.DISABLED,text="",bd=0,bg="dark slate gray")
 
-        if self.continuar.get()==False:
+    #=================
+    def quedarse(self):#Boton para quedarse y no pedir mas cartas
+        record_mejorado=False #variable que detecta si se mejoro el record anterior
+
+        self.botonPedir.configure(state=tk.DISABLED,bg="grey")
+        self.botonCambiar.configure(state=tk.DISABLED,bg="dark slate gray",text="",bd=0)
+
+        if self.continuar.get()==False:#si aun no se activo el boton continuar
             self.botonQuedarse.configure(state=tk.DISABLED)#desactiva el boton quedarse
-            for i in range(0,5):#Se generan las cartas de skynet
-                if self.total_cartas_skynet <17:
+
+            for i in range(1,5):#Se generan las cartas de skynet
+                if self.total_cartas_skynet <17:#mientras tenga menos de 17 sigue pidiendo
                     self.lista_cartas_skynet.append(carta_aleatoria_skynet(self.total_cartas_skynet))
-                    self.lista_labels_skynet[i].config(text=convertir_carta(self.lista_cartas_skynet[i]),background="white",foreground="black")           
+                    self.lista_labels_skynet[i].config(text=convertir_carta(self.lista_cartas_skynet[i]),bg="white",fg="black")           
 
                     self.total_cartas_skynet=sum(self.lista_cartas_skynet)
                     self.suma_total_skynet_label.configure(text=self.total_cartas_skynet)
 
                     self.ventana1.update()
-                    self.ventana1.after(350)
+                    self.ventana1.after(300)
                 else:
                     break
 
             #============
-            mensaje=""
+            mensaje=""#variable donde se guarda el mensje final
             #Si los dos se pasan de 21 (empatan):
             if self.total_cartas_jugador > 21 and self.total_cartas_skynet > 21:
                 mensaje="VOS Y SKYNET SE PASAN  DE 21, EMPATE"
@@ -461,212 +438,141 @@ class Aplicacion:
             #Si hubo un empate:
             if self.jugador_empato.get()==True:
                 if self.se_ha_apostado.get():
+                    self.resultado_label.configure(fg="white")
                     self.fichas_sumadas=int(self.apuesta.get())
                     self.fichas_jugador+=self.fichas_sumadas
-                    self.label_fichas_sumadas_jugador.configure(foreground="white",text="\n\n\n\n+"+str(self.fichas_sumadas))
+                    self.label_fichas_sumadas_jugador.configure(fg="white",text="+"+str(self.fichas_sumadas))
 
             #Si el jugador gana:
             elif self.jugador_gano.get()==True:
-                self.resultado_label.configure(foreground="green")
-                self.suma_total_skynet_label.configure(foreground="green")
+                self.resultado_label.configure(fg="lightgreen")
+                self.suma_total_skynet_label.configure(fg="green")
 
                 if self.se_ha_apostado.get():
-                    #se le dan sus fichas multiplicadas por 5
-                    self.fichas_sumadas=int(self.apuesta.get())*5
+                    self.fichas_sumadas=int(self.apuesta.get())*2
                     self.fichas_jugador+=self.fichas_sumadas
-                    self.label_fichas_sumadas_jugador.configure(foreground="green",text="\n\n\n\n+"+str(self.fichas_sumadas))
+                    self.label_fichas_sumadas_jugador.configure(fg="green",text="+"+str(self.fichas_sumadas))
 
                     if self.fichas_jugador > int(self.record.get()):#si se mejora el record
+                        global fichas_global
                         record_mejorado=True
                         self.record.set(self.fichas_jugador)
+                        fichas_global = self.record.get()
                 
-                        if datos_sesion[0] !="":
-                            datos_sesion[1] = self.record.get()
+                        if nombre_introducido:#si el jugador ingreso un nombre
                             actualizar_record()
 
             else:#Si el jugador pierde
-                self.resultado_label.configure(foreground="red")
-                self.suma_total_skynet_label.configure(foreground="red") 
+                self.resultado_label.configure(fg="red")
+                self.botonQuedarse.configure(bg="red")
+                self.suma_total_skynet_label.configure(fg="red") 
 
             if self.jugador_gano.get()==True or self.jugador_empato.get()==True:
                 escribir("fichas: ",dividir_cifras(self.fichas_jugador),self.label_fichas_jugador,self.ventana1)
+
+            if self.jugador_empato.get()==True:#si el jugador empato
+                self.botonQuedarse.configure(bg="lightgreen",fg="black")
+
+            elif self.jugador_gano.get()==True: #si el jugador empato
+                self.botonQuedarse.configure(bg="green",fg="white")
                 
             escribir("",mensaje,self.resultado_label,self.ventana1)
 
-            if record_mejorado:
+            if record_mejorado:#si el jugador mejoro su record
                 escribir("Record actual: ",dividir_cifras(int(self.record.get())),self.label_record,self.ventana1)
 
-            #============
-
-
-            self.continuar.set(True)
-            self.botonQuedarse.configure(text="Continuar",state=tk.NORMAL)
-            if self.jugador_empato.get()==True:
-                self.botonQuedarse.configure(background="lightgreen",foreground="black")
-
-            elif self.jugador_gano.get()==True: 
-                self.botonQuedarse.configure(background="green",foreground="white")
-
-            #============
-            if self.videos.get():#Si estan activados los videos
-                if self.jugador_empato.get()==False:
-                    if random.randint(1,3) == random.randint(1,3):
-                        eleccion,pov=elegir_video(self.jugador_gano.get(),self.jugador_empato.get())
-                        abrir_ventana_camara(eleccion,pov)
-                else:
-                    if random.choice([True,True,False])==True:
-                        eleccion,pov=elegir_video(self.jugador_gano.get(),self.jugador_empato.get())
-                        abrir_ventana_camara(eleccion,pov)
-
+            self.continuar.set(True)#se activa el boton continuar
+            if self.fichas_jugador==0:
+                self.botonQuedarse.configure(text="Reiniciar",state=tk.NORMAL)
+                self.reiniciar.set(True)
+            else:
+                self.botonQuedarse.configure(text="Continuar",state=tk.NORMAL)
 
         #============
-        else:#Cuando el jugador presione Continuar
-            self.contador = 0
-            self.ases_totales = 0
-            self.total_cartas_skynet=0
-            self.lista_cartas_jugador=[]
-            self.lista_cartas_skynet=[]
-            self.jugador_gano.set(False)
-            self.se_ha_apostado.set(False)
-            self.jugador_empato.set(False)
-            self.continuar.set(False)
-            
-            #============
-            for i in range(5):
-                self.lista_labels_skynet[i].config(text="",background="brown")
-                self.lista_labels_jugador[i].config(text="",background="brown")
+        else:#Cuando el jugador presione Continuar (se reinicia todo)
+            reiniciar_blackjack()
 
-            self.suma_total_skynet_label.configure(text="",foreground="white")
-            self.suma_total_jugador_label.configure(text="0",foreground="white")
-            self.resultado_label.configure(text="")
-            self.label_fichas_sumadas_jugador.configure(foreground="white",text="\n\n\n\n")
+            if self.reiniciar.get():
+                self.reiniciar.set(False)
+                self.fichas_jugador=100
+                self.label_fichas_jugador.configure(text="fichas: 100")
+                if dificultad=="normal":
+                    self.apuesta.set(10)  
 
-            self.entrada_apuesta.configure(state=tk.NORMAL)
-            self.botonPedir.configure(state=tk.NORMAL,background="black")
-            self.botonQuedarse.configure(state=tk.DISABLED,text="Quedarse",background="black",foreground="magenta")
+                elif dificultad=="hardcore":
+                    self.apuesta.set(self.fichas_jugador)                
 
-            cambiar_tema(self.tema.get())
+            if dificultad=="normal":
+                self.entrada_apuesta.configure(state=tk.NORMAL)
+            elif dificultad=="hardcore":
+                self.apuesta.set(self.fichas_jugador)
 
-def elegir_video(gano,empato):
-    eleccion=""
-    pov=""
-    if empato==True:
-        eleccion = "carpeta_datos/videos/jugador_empata/"
-        pov = random.choice(os.listdir("carpeta_datos/videos/jugador_empata/"))
-        
-    elif gano==True:
-        eleccion = "carpeta_datos/videos/jugador_gana/"
-        pov = random.choice(os.listdir("carpeta_datos/videos/jugador_gana/"))
-    
-    elif gano==False:
-        eleccion = "carpeta_datos/videos/jugador_pierde/"
-        pov = random.choice(os.listdir("carpeta_datos/videos/jugador_pierde/"))
-
-    eleccion += pov
-    eleccion +="/"+random.choice(os.listdir(eleccion))
-
-    pov = pov.replace("_"," ")
-    pov = pov.upper()
-
-    return eleccion,pov
-    
-
-def abrir_ventana_camara(eleccion,pov):
-    ventana_camara = tk.Toplevel()
-    ventana_camara.title("Camara en vivo")
-
-    global cap
-    cap = cv2.VideoCapture(eleccion)
-
-    label_info = tk.Label(ventana_camara, text=pov,font=("Impact", 24),foreground="red",justify="center")
-    label_info.grid(column=0,row=0)
-
-    label_video = tk.Label(ventana_camara)
-    label_video.grid(column=0,row=2,columnspan=2)
-
-    def visualizar_video():
-        global cap
-        ret, frame = cap.read()
-        if ret == True:
-            frame = imutils.resize(frame, width=280)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            im = Image.fromarray(frame)
-            img = ImageTk.PhotoImage(image=im)
-
-            label_video.configure(image=img)
-            label_video.image = img
-            label_video.after(13,visualizar_video)
-        else:
-            label_video.image = ""
-            cap.release()
-            ventana_camara.destroy()
-    visualizar_video()
+#==================
 
 def abrir_ventana_usuario():#Ventana secundaria donde se introduce el nombre de usuario
     ventana_usuario = tk.Toplevel()
     ventana_usuario.title("Nombre de usuario")
-    ventana_usuario.configure(background="dark slate gray")
+    ventana_usuario.configure(bg="dark slate gray")
 
-    label_cartel_1=tk.Label(ventana_usuario,text="Ingresa tu nombre de usuario!",foreground="gold2",background="dark slate gray",font=("Gabriola", 20))
-    label_cartel_1.grid(column=0, row=0)
+    cuadro1=tk.LabelFrame(ventana_usuario,bd=5,padx=15,pady=15,bg="dark slate gray")
+    cuadro1.grid(column=0,row=0)
+    cuadro2=tk.LabelFrame(ventana_usuario,bd=5,padx=103,pady=15,fg="white",font=("Fixedsys", 10),bg="dark slate gray",text="Usuarios en modo Normal")
+    cuadro2.grid(column=0,row=1)
+    cuadro3=tk.LabelFrame(ventana_usuario,bd=5,padx=103,pady=15,fg="white",font=("Fixedsys", 10),bg="dark slate gray",text="Usuarios en modo Hardcore")
+    cuadro3.grid(column=0,row=2)
 
-    label_cartel_2=tk.Label(ventana_usuario,text="\n\n\n\nEste nombre se utilizara para guardar\n tu record de fichas y podra ser visto por\n los demas usuarios en el Scoreboard\n elige con cuidado!",foreground="white",background="dark slate gray",font=("Lucida Grande",10))
-    label_cartel_2.grid(column=0, row=3)
+    tk.Label(cuadro1,text="Ingresa tu nombre de usuario!",fg="orange",bg="dark slate gray",font=("Gabriola", 20,"bold")).grid(column=0, row=0,pady=10)
+    tk.Label(cuadro1,pady=25,fg="white",bg="dark slate gray",font=("Lucida Grande",10),text="Este nombre se utilizara para guardar tu record de fichas\n y sera visto por los demas usuarios en el Scoreboard\n\nSi tu nombre aparece en la lista de Usuarios Guardados\ningresalo para mantenerlo actualizado").grid(column=0, row=3)
 
-    entrada_nombre=tk.Entry(ventana_usuario, width=14, textvariable="Sapos", background="purple",foreground="white",insertbackground="white",font=("Lucida Grande", 14))
-    entrada_nombre.grid(column=0, row=1)
+    entrada_nombre=tk.Entry(cuadro1, width=14, bg="purple",fg="white",insertbackground="white",font=("Lucida Grande", 14))
+    entrada_nombre.grid(column=0, row=1,pady=10)
     
-    def guardar():#boton guardar
-        #Si el nombre introducido no esta vacio y ocupa menos de 20 caracteres:
-        if entrada_nombre.get() != "" and len(entrada_nombre.get()) <20:
-            global datos_sesion
-            global nombre_introducido
-
-            datos_sesion[0] = entrada_nombre.get()
+    def guardar():#boton para guardar el nombre
+        #Si el nombre introducido no esta vacio y ocupa menos de 30 caracteres:
+        if entrada_nombre.get() != "" and len(entrada_nombre.get()) <30 and not "-" in entrada_nombre.get():
+            global nombre_global,nombre_introducido
+            nombre_global = entrada_nombre.get()
             nombre_introducido=True
 
-            #Luego de 1 segundo cerrar la ventana:
-            ventana_usuario.after(500)
+            actualizar_record()
+            ventana_usuario.after(300)
             abrir_ventana_scoreboard()
             ventana_usuario.destroy()
 
-    botonGuardar=tk.Button(ventana_usuario, width=14, text="Guardar nombre",background="black",foreground="white",font=("Lucida Grande", 10),command=guardar)
-    botonGuardar.grid(column=0, row=2)
+    tk.Button(cuadro1, width=14, text="Guardar nombre",bg="brown",fg="white",font=("Segoe Script", 10),command=guardar).grid(column=0, row=2)
+
+    datos_normal,datos_hardcore=leer_archivo()
+
+    for i,elemento in enumerate(datos_normal.keys()):#se crean labels conforme jugadores guardados haya
+        tk.Label(cuadro2,text=elemento,bg="dark slate gray",fg="orange",font=("fixedsys",12)).grid(column=0, row=i)
+    for i,elemento in enumerate(datos_hardcore.keys()):#lo mismo pero con los hardcore
+        tk.Label(cuadro3,text=elemento,bg="dark slate gray",fg="orange",font=("fixedsys",12)).grid(column=0, row=i)
 
 def abrir_ventana_scoreboard():#Ventana del scoreboard
     ventana_scoreboard = tk.Toplevel()
-    ventana_scoreboard.title("Ventana secundaria")
-    ventana_scoreboard.configure(background="dark slate gray")
-    ventana_scoreboard.geometry("400x400")
+    ventana_scoreboard.title("Scoreboard")
+    ventana_scoreboard.configure(bg="dark slate gray")
 
-    lineas_texto_modificado =[]
-    n=2
-    
-    archivo_records = open("carpeta_datos/records.txt","r")
-    lineas_texto=archivo_records.read()
-    archivo_records.close()
+    archivo_normal,archivo_hardcore=leer_archivo()
+    cuadro=tk.LabelFrame(ventana_scoreboard,bd=5,padx=2,pady=15,bg="dark slate gray")
+    cuadro.grid(column=0,row=0)
+    cuadro2=tk.LabelFrame(ventana_scoreboard,bd=5,padx=2,pady=15,bg="dark slate gray")
+    cuadro2.grid(column=0,row=1)
+    colores=["#FF5000","#FF9000","#FFD000","#FFF400","#00FB00","#00FFF0","#AFFFFF"]#colores de los 3 primeros jugadores
+    tk.Label(cuadro,text="~~~~~~~~~~~Modo Normal~~~~~~~~~~~~",fg="gold2",bg="dark slate gray",font=("Gabriola", 20,"bold")).grid(column=0, row=0)
 
-    #Se dividen los datos y se guardan en "lineas_texto_separado" en forma de lista:
-    lineas_texto_separado = lineas_texto.split()
+    for i,clave in enumerate (archivo_normal.keys()):#por cada nombre que haya se crea una label
+        color="#FFFFFF"
+        if i<6:
+            color=colores[i]
+        tk.Label(cuadro,fg=color,text="\n"+clave+": "+dividir_cifras(int(archivo_normal[clave])),bg="dark slate gray",font=("fixedsys",12),justify="center").grid(column=0, row=i+1)
 
-    for palabra in lineas_texto_separado:
-        if n % 2 == 0:#si "n" es par es porque esta leyendo un nombre en la lista
-            lineas_texto_modificado.append(palabra+": ")
-        else:#Si no es par es porque esta leyendo el record del nombre
-            lineas_texto_modificado.append(palabra+"\n\n")    
-        n+=1
-        
-    #luego de procesar la lista "lineas_texto_modificado" se transforma en un string:
-    lineas_texto_final = " ".join(lineas_texto_modificado)
-
-    label_scoreboard=tk.Label(ventana_scoreboard,text="~~~~~~~~~~~~~~Scoreboard~~~~~~~~~~~~~~",foreground="gold2",background="dark slate gray",font=("Gabriola", 20))
-    label_scoreboard.grid(column=0, row=0)
-
-    label_records=tk.Label(ventana_scoreboard,foreground="white",background="dark slate gray",font=("Segoe Script", 14))
-    label_records.grid(column=0, row=1)
-
-    escribir("",lineas_texto_final,label_records,ventana_scoreboard)
+    tk.Label(cuadro2,text="---------------Modo Hardcore---------------",fg="red",bg="dark slate gray",font=("Gabriola", 20,"bold")).grid(column=0, row=0)
+    for i,clave in enumerate (archivo_hardcore.keys()):#por cada nombre que haya se crea una label
+        color="#FFFFFF"
+        if i<6:
+            color=colores[i]
+        tk.Label(cuadro2,fg=color,text="\n"+clave+": "+dividir_cifras(int(archivo_hardcore[clave])),bg="dark slate gray",font=("fixedsys",12),justify="center").grid(column=0, row=i+1)
+            
     ventana_scoreboard.focus()
-
 aplicacion1=Aplicacion()
